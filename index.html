@@ -2,181 +2,254 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>VARKZ</title>
+<title>VARKZ Studio</title>
 
 <style>
-
-body{
-margin:0;
-font-family:Arial;
-background:#dfe3e6;
-color:#222;
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #dfe3e6;
+  color: #222;
 }
 
 /* HEADER */
-h2{
-margin:10px;
-}
+h2 { margin: 10px; }
 
 /* BAR */
-#bar{
-display:flex;
-gap:8px;
-padding:10px;
-background:#cfd4d9;
-border-bottom:1px solid #aaa;
-position:sticky;
-top:0;
-z-index:10;
+#bar {
+  display: flex;
+  gap: 8px;
+  padding: 10px;
+  background: #cfd4d9;
+  border-bottom: 1px solid #aaa;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
-button{
-padding:8px 12px;
-border:1px solid #aaa;
-background:#f5f5f5;
-cursor:pointer;
-border-radius:6px;
-transition:0.15s;
+button {
+  padding: 8px 12px;
+  border: 1px solid #aaa;
+  background: #f5f5f5;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: 0.15s;
 }
-
-button:hover{
-background:#fff;
-transform:translateY(-1px);
-}
-
-button:active{
-transform:translateY(1px);
-}
+button:hover { background: #fff; transform: translateY(-1px); }
+button:active { transform: translateY(1px); }
 
 /* WRAP */
-#wrap{
-display:flex;
-height:320px;
-margin:10px;
-border:1px solid #aaa;
-background:white;
-border-radius:6px;
-overflow:hidden;
+#wrap {
+  display: flex;
+  height: 320px;
+  margin: 10px;
+  border: 1px solid #aaa;
+  background: white;
+  border-radius: 6px;
+  overflow: hidden;
 }
 
 /* LINE NUMBERS */
-#lineNumbers{
-width:55px;
-background:#e7e7e7;
-padding:10px;
-text-align:right;
-font-family:monospace;
-user-select:none;
-color:#666;
-overflow:hidden;
+#lineNumbers {
+  width: 55px;
+  background: #e7e7e7;
+  padding: 10px 0;
+  text-align: right;
+  font-family: monospace;
+  font-size: 14px;
+  line-height: 20px;
+  user-select: none;
+  color: #666;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
-/* EDITOR */
-textarea{
-flex:1;
-border:none;
-outline:none;
-resize:none;
-padding:10px;
-font-family:monospace;
-font-size:14px;
-background:#fafafa;
-overflow:auto;
+/* CONTAINER DO EDITOR DUPLO */
+#editorContainer {
+  flex: 1;
+  position: relative;
+  background: #fafafa;
 }
+
+/* TEXTAREA E HIGHLIGHTER COMPARTILHAM O MESMO DESIGN EXATO */
+textarea, #highlightLayer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  padding: 10px;
+  box-sizing: border-box;
+  font-family: monospace;
+  font-size: 14px;
+  line-height: 20px;
+  margin: 0;
+  border: none;
+  outline: none;
+  resize: none;
+  white-space: pre;
+  overflow: auto;
+}
+
+/* O TEXTAREA FICA INVISÍVEL, MAS RECEBE O CLIQUE E O CURSOR */
+textarea {
+  background: transparent;
+  color: transparent;
+  caret-color: #222;
+  z-index: 2;
+}
+
+/* A CAMADA DE CORES FICA ATRÁS */
+#highlightLayer {
+  color: #333;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* 🎨 PALETA DE CORES DA VARKZ */
+.vzk-command  { color: #a626a4; font-weight: bold; } /* Comandos principais */
+.vzk-symbol   { color: #da8548; font-weight: bold; } /* ~, ++, --, >> */
+.vzk-if       { color: #0184a7; font-weight: bold; } /* ?, :, ! */
+.vzk-string   { color: #50a14f; }                   /* "texto" */
+.vzk-number   { color: #4078f2; }                   /* 10, 20, 50 */
+.vzk-comment  { color: #a0a1a7; font-style: italic; }/* # comentários */
 
 /* OUTPUT */
-#out{
-margin:10px;
-padding:10px;
-height:160px;
-background:#ffffff;
-color:#111;
-border:1px solid #aaa;
-border-radius:6px;
-overflow:auto;
-font-family:monospace;
-white-space:pre-wrap;
+#out {
+  margin: 10px;
+  padding: 10px;
+  height: 160px;
+  background: #ffffff;
+  color: #111;
+  border: 1px solid #aaa;
+  border-radius: 6px;
+  overflow: auto;
+  font-family: monospace;
+  white-space: pre-wrap;
 }
-
 </style>
-
 </head>
 
 <body>
 
 <h2>VARKZ</h2>
 
-<!-- BAR -->
 <div id="bar">
-
-<button onclick="run()">▶ Run</button>
-
-<button onclick="exportVZK(document.getElementById('code').value)">
-📤 Export
-</button>
-
-<button onclick="importVZK(code => document.getElementById('code').value = code)">
-📥 Import
-</button>
-
+  <button onclick="run()">▶ Run</button>
+  <button onclick="exportVZK(document.getElementById('code').value)">📤 Export</button>
+  <button onclick="importVZK(code => { document.getElementById('code').value = code; updateEditor(); })">📥 Import</button>
 </div>
 
-<!-- EDITOR -->
 <div id="wrap">
-
-<div id="lineNumbers"></div>
-
-<textarea id="code" oninput="updateLines()">
-show "Hello World"
-</textarea>
-
+  <div id="lineNumbers"><div style="padding-right: 10px;">1</div></div>
+  
+  <div id="editorContainer">
+    <div id="highlightLayer"></div>
+    <textarea id="code" oninput="updateEditor()" onscroll="syncScroll()">show "Hello World"</textarea>
+  </div>
 </div>
 
-<!-- OUTPUT -->
 <pre id="out"></pre>
 
 <script src="vzk-system.js"></script>
 <script src="varkz.js"></script>
 
 <script>
+const codeArea = document.getElementById("code");
+const highlightLayer = document.getElementById("highlightLayer");
+const lineNumbers = document.getElementById("lineNumbers");
 
-/* =========================
-   LINHAS
-========================= */
-function updateLines(){
+/* =====================================================
+   🎨 SISTEMA DE HIGHLIGHT (COLORIR)
+===================================================== */
+function highlightVarkz(text) {
+  let html = text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 
-let lines =
-document.getElementById("code")
-.value.split("\n").length;
+  // 1. Comentários (# comentário)
+  html = html.replace(/(#.*)/g, '<span class="vzk-comment">$1</span>');
 
-let html = "";
+  // 2. Strings ("texto")
+  html = html.replace(/(".*?")/g, '<span class="vzk-string">$1</span>');
 
-for(let i = 1; i <= lines; i++){
-html += i + "<br>";
+  // 3. Super Lista de Comandos Atualizada (Contém os novos 50 comandos)
+  const comandos = [
+    "var", "set", "show", "input", "clear", "reset", "check", "type", "log", "swap", 
+    "time\\(day\\)", "time\\(hour\\)", "kill", "repeat", "end",
+    "upper", "lower", "len", "trim", "rev", "replace", "concat", "split",
+    "round", "floor", "ceil", "abs", "pow", "sqrt", "min", "max",
+    "arr\\.new", "arr\\.push", "arr\\.get", "arr\\.size", "arr\\.pop",
+    "time\\(ms\\)", "sleep", "env\\.lang", "env\\.platform",
+    "web\\.redirect", "web\\.alert", "dom\\.title", "dom\\.write", "dom\\.color",
+    "storage\\.set", "storage\\.get", "to\\.num", "to\\.str", "is\\.nan", "vzk\\.version"
+  ];
+  
+  comandos.forEach(cmd => {
+    let regex = new RegExp(`\\b(${cmd})\\b`, "g");
+    html = html.replace(regex, '<span class="vzk-command">$1</span>');
+  });
+
+  // 4. Comandos por Símbolos (~, ++, --, >>)
+  html = html.replace(/(~.+?~\s*>\s*\w+)/g, '<span class="vzk-symbol">$1</span>');
+  html = html.replace(/(\+\+\s*\w+)/g, '<span class="vzk-symbol">$1</span>');
+  html = html.replace(/(--\s*\w+)/g, '<span class="vzk-symbol">$1</span>');
+  html = html.replace(/(>>\s*\w+)/g, '<span class="vzk-symbol">$1</span>');
+
+  // 5. Condicionais estruturais (?, :, !)
+  html = html.replace(/(\?.+?\?)/g, '<span class="vzk-if">$1</span>');
+  html = html.replace(/( :| !|^:|^!)/gm, '<span class="vzk-if">$1</span>');
+
+  // 6. Números isolados
+  html = html.replace(/\b(\d+)\b/g, '<span class="vzk-number">$1</span>');
+
+  return html;
 }
 
-document.getElementById("lineNumbers").innerHTML =
-html;
+/* =====================================================
+   🔄 ATUALIZAR EDITOR (LINHAS + CORES)
+===================================================== */
+function updateEditor() {
+  let content = codeArea.value;
+
+  // 1. Atualiza as linhas numéricas paralelas
+  let linesCount = content.split("\n").length;
+  let linesHtml = '<div style="padding-right: 10px;">';
+  for (let i = 1; i <= linesCount; i++) {
+    linesHtml += i + "<br>";
+  }
+  linesHtml += '</div>';
+  lineNumbers.innerHTML = linesHtml;
+
+  // 2. Atualiza o texto colorido na div de trás
+  highlightLayer.innerHTML = highlightVarkz(content) + (content.endsWith("\n") ? "\n " : "");
+  
+  // Sincroniza o scroll imediatamente
+  syncScroll();
 }
 
-updateLines();
-
-
-/* =========================
-   RUN
-========================= */
-function run(){
-
-const code =
-document.getElementById("code").value;
-
-const result =
-VARKZ.run(code);
-
-document.getElementById("out").innerText =
-result;
+/* =====================================================
+   📜 SINCRONIZAR SCROLL
+===================================================== */
+function syncScroll() {
+  highlightLayer.scrollTop = codeArea.scrollTop;
+  highlightLayer.scrollLeft = codeArea.scrollLeft;
+  lineNumbers.scrollTop = codeArea.scrollTop;
 }
 
+// Inicializa no carregamento da tela
+updateEditor();
+
+/* =====================================================
+   ▶ RUN
+===================================================== */
+function run() {
+  const code = codeArea.value;
+  const result = VARKZ.run(code);
+  document.getElementById("out").innerText = result;
+}
 </script>
 
 </body>
