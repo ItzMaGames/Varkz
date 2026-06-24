@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>VARKZ</title>
+
+<style>
+
+body{
+margin:0;
+font-family:Arial;
+background:#dfe3e6;
+color:#222;
+}
+
+/* HEADER */
+h2{
+margin:10px;
+}
+
+/* BAR */
+#bar{
+display:flex;
+gap:8px;
+padding:10px;
+background:#cfd4d9;
+border-bottom:1px solid #aaa;
+position:sticky;
+top:0;
+z-index:10;
+}
+
+button{
+padding:8px 12px;
+border:1px solid #aaa;
+background:#f5f5f5;
+cursor:pointer;
+border-radius:6px;
+transition:0.15s;
+}
+
+button:hover{
+background:#fff;
+transform:translateY(-1px);
+}
+
+button:active{
+transform:translateY(1px);
+}
+
+/* WRAP */
+#wrap{
+display:flex;
+height:320px;
+margin:10px;
+border:1px solid #aaa;
+background:white;
+border-radius:6px;
+overflow:hidden;
+}
+
+/* LINE NUMBERS */
+#lineNumbers{
+width:55px;
+background:#e7e7e7;
+padding:10px;
+text-align:right;
+font-family:monospace;
+user-select:none;
+color:#666;
+overflow:hidden;
+}
+
+/* EDITOR */
+textarea{
+flex:1;
+border:none;
+outline:none;
+resize:none;
+padding:10px;
+font-family:monospace;
+font-size:14px;
+background:#fafafa;
+overflow:auto;
+}
+
+/* OUTPUT */
+#out{
+margin:10px;
+padding:10px;
+height:160px;
+background:#ffffff;
+color:#111;
+border:1px solid #aaa;
+border-radius:6px;
+overflow:auto;
+font-family:monospace;
+white-space:pre-wrap;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h2>VARKZ</h2>
+
+<!-- BAR -->
+<div id="bar">
+
+<button onclick="run()">▶ Run</button>
+
+<button onclick="exportVZK(document.getElementById('code').value)">
+📤 Export
+</button>
+
+<button onclick="importVZK(code => document.getElementById('code').value = code)">
+📥 Import
+</button>
+
+</div>
+
+<!-- EDITOR -->
+<div id="wrap">
+
+<div id="lineNumbers"></div>
+
+<textarea id="code" oninput="updateLines()">
+show "Hello World"
+</textarea>
+
+</div>
+
+<!-- OUTPUT -->
+<pre id="out"></pre>
+
+<script src="vzk-system.js"></script>
+<script src="varkz.js"></script>
+
+<script>
+
+/* =========================
+   LINHAS
+========================= */
+function updateLines(){
+
+let lines =
+document.getElementById("code")
+.value.split("\n").length;
+
+let html = "";
+
+for(let i = 1; i <= lines; i++){
+html += i + "<br>";
+}
+
+document.getElementById("lineNumbers").innerHTML =
+html;
+}
+
+updateLines();
+
+
+/* =========================
+   RUN
+========================= */
+function run(){
+
+const code =
+document.getElementById("code").value;
+
+const result =
+VARKZ.run(code);
+
+document.getElementById("out").innerText =
+result;
+}
+
+</script>
+
+</body>
+</html>
