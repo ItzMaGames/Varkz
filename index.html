@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>VARKZ Studio</title>
+<title>VARKZ Studio with Autocomplete</title>
 
 <style>
 body {
@@ -12,7 +12,6 @@ body {
   color: #222;
 }
 
-/* HEADER */
 h2 { margin: 10px; }
 
 /* BAR */
@@ -47,6 +46,7 @@ button:active { transform: translateY(1px); }
   background: white;
   border-radius: 6px;
   overflow: hidden;
+  position: relative;
 }
 
 /* LINE NUMBERS */
@@ -71,7 +71,6 @@ button:active { transform: translateY(1px); }
   background: #fafafa;
 }
 
-/* TEXTAREA E HIGHLIGHTER COMPARTILHAM O MESMO DESIGN EXATO */
 textarea, #highlightLayer {
   position: absolute;
   top: 0;
@@ -91,7 +90,6 @@ textarea, #highlightLayer {
   overflow: auto;
 }
 
-/* O TEXTAREA FICA INVISÍVEL, MAS RECEBE O CLIQUE E O CURSOR */
 textarea {
   background: transparent;
   color: transparent;
@@ -99,7 +97,6 @@ textarea {
   z-index: 2;
 }
 
-/* A CAMADA DE CORES FICA ATRÁS */
 #highlightLayer {
   color: #333;
   z-index: 1;
@@ -108,12 +105,40 @@ textarea {
 }
 
 /* 🎨 PALETA DE CORES DA VARKZ */
-.vzk-command  { color: #a626a4; font-weight: bold; } /* Comandos principais */
-.vzk-symbol   { color: #da8548; font-weight: bold; } /* ~, ++, --, >> */
-.vzk-if       { color: #0184a7; font-weight: bold; } /* ?, :, ! */
-.vzk-string   { color: #50a14f; }                   /* "texto" */
-.vzk-number   { color: #4078f2; }                   /* 10, 20, 50 */
-.vzk-comment  { color: #a0a1a7; font-style: italic; }/* # comentários */
+.vzk-command  { color: #a626a4; font-weight: bold; }
+.vzk-symbol   { color: #da8548; font-weight: bold; }
+.vzk-if       { color: #0184a7; font-weight: bold; }
+.vzk-string   { color: #50a14f; }
+.vzk-number   { color: #4078f2; }
+.vzk-comment  { color: #a0a1a7; font-style: italic; }
+
+/* 🌟 POPUP DE AUTOCOMPLETE */
+#autocomplete-list {
+  position: absolute;
+  background: #ffffff;
+  border: 1px solid #999;
+  box-shadow: 0px 4px 10px rgba(0,0,0,0.15);
+  max-height: 150px;
+  overflow-y: auto;
+  font-family: monospace;
+  font-size: 13px;
+  z-index: 100;
+  display: none;
+  border-radius: 4px;
+}
+#autocomplete-list div {
+  padding: 6px 12px;
+  cursor: pointer;
+  color: #333;
+}
+#autocomplete-list div.active {
+  background-color: #a626a4;
+  color: #fff;
+}
+#autocomplete-list div:hover {
+  background-color: #f0f0f0;
+  color: #000;
+}
 
 /* OUTPUT */
 #out {
@@ -133,7 +158,7 @@ textarea {
 
 <body>
 
-<h2>VARKZ</h2>
+<h2>VARKZ Studio</h2>
 
 <div id="bar">
   <button onclick="run()">▶ Run</button>
@@ -146,7 +171,8 @@ textarea {
   
   <div id="editorContainer">
     <div id="highlightLayer"></div>
-    <textarea id="code" oninput="updateEditor()" onscroll="syncScroll()">show "Hello World"</textarea>
+    <textarea id="code" oninput="onEditorInput(event)" onkeydown="onEditorKeyDown(event)" onscroll="syncScroll()">show "Hello World"</textarea>
+    <div id="autocomplete-list"></div>
   </div>
 </div>
 
@@ -159,95 +185,210 @@ textarea {
 const codeArea = document.getElementById("code");
 const highlightLayer = document.getElementById("highlightLayer");
 const lineNumbers = document.getElementById("lineNumbers");
+const acList = document.getElementById("autocomplete-list");
+
+const listaComandosRaw = [
+  // --- PARTE 1: NÚCLEO, VARIÁVEIS E MATEMÁTICA BÁSICA (100 COMANDOS) ---
+  "var", "set", "rename", "show", "input", "clear", "reset", "check", "type", "log", "swap", "kill", "repeat", "end",
+  "vzk.version", "vzk.credits", "vzk.benchmark", "vzk.clearvars", "vzk.die",
+  "upper", "lower", "len", "trim", "rev", "replace", "concat", "split",
+  "str.capitalize", "str.countword", "round", "floor", "ceil", "abs", "pow", "sqrt", "min", "max", "to.num", "to.str", "to.bool", "is.nan",
+  "is.even", "is.odd", "is.prime", "num.fixed", "num.sign", "num.isint", "num.abs", "num.pow", "num.sqrt", "num.isnegative", "num.ispositive",
+  "math.pi", "math.e", "math.sin", "math.cos", "math.tan", "math.asin", "math.acos", "math.atan", "math.sinh", "math.cosh", "math.tanh", "math.cbrt",
+  "math.log", "math.log10", "math.deg2rad", "math.rad2deg", "math.random", "math.roundto", "math.trunc", "math.clz32", "math.fround", "math.clamp", "math.hypot", "math.fact",
+  "arr.new", "arr.push", "arr.pop", "arr.shift", "arr.unshift", "arr.get", "arr.at", "arr.set", "arr.size", "arr.clear", "arr.fill", "arr.join", "arr.rev", "arr.sort", "arr.unique", "arr.has", "arr.idx", "arr.slice", "arr.merge", "arr.rand", "arr.mean", "arr.median", "arr.max", "arr.min", "arr.filtercontain",
+  "web.alert", "web.confirm", "web.prompt", "storage.set", "storage.get", "json.stringify", "time(ms)", "date.year", "date.month", "date.day", "sys.online",
+
+  // --- PARTE 2: STRINGS AVANÇADAS, VALIDATION, SISTEMA & DATA CONTEXTS (40 COMANDOS) ---
+  "str.slug", "str.truncate", "str.hasspace", "str.isalphanum", "str.isascii", "str.islower", "str.isupper", "str.pad", "str.repeat", "str.include", "str.idx", "str.lastidx", "str.starts", "str.ends", "str.hexencode", "str.hexdecode",
+  "validate.email", "validate.url", "validate.phone", "validate.ip", "validate.json", "validate.date",
+  "web.redirect", "web.reload", "web.copy", "web.vibrate", "web.scrolltop", "sound.beep",
+  "sys.memory", "sys.battery", "sys.touch", "sys.screenw", "sys.screenh", "sys.innerw", "sys.innerh", "sys.pixelratio", "env.lang", "env.platform",
+  "storage.clear", "storage.remove",
+
+  // --- PARTE 3: MATRIZES, ESTRUTURAS, REDES & AI (35 COMANDOS) ---
+  "matrix.create", "matrix.set", "matrix.get",
+  "data.stack.new", "data.stack.push", "data.stack.pop", "data.queue.new", "data.queue.enqueue", "data.queue.dequeue", "data.map.set", "data.map.get", "data.map.has", "data.map.del",
+  "net.ping", "net.ip.api", "net.encode", "net.decode", "json.get",
+  "vzk.ai.decision", "vzk.ai.pathfind", "vzk.ai.randombehavior", "vzk.ai.distance", "vzk.ai.predict", "vzk.ai.vision",
+  "crypto.cipher", "crypto.decipher", "crypto.hash",
+  "math.adv.gcd", "math.adv.lcm", "math.adv.percent", "math.adv.ispowerof2", "math.adv.clamp", "math.adv.root", "math.adv.fact", "math.adv.fibonacci",
+
+  // --- PARTE 4: MULTIMÍDIA, GRAPHICS & GAME ENGINE (25 COMANDOS) ---
+  "create gfx", "gfx.color", "gfx.clear", "gfx.rect", "gfx.line", "gfx.rectline", "gfx.circle", "gfx.circleline", "gfx.pixel", "gfx.text", "gfx.font", "gfx.linewidth", "gfx.blur", "gfx.noblur", "gfx.save", "gfx.restore", "gfx.translate", "gfx.rotate", "gfx.scale", "gfx.destroy",
+  "create game", "game.img.load", "game.img.draw", "game.img.drawscale", "game.img.crop",
+
+  // --- PARTE 5: ENTRADAS DE AUDIO, GAME INTERFACE, FÍSICA & TECLADO (25 COMANDOS) ---
+  "game.img.unload", "game.snd.load", "game.snd.play", "game.snd.pause", "game.snd.stop", "game.snd.loop", "game.snd.noloop", "game.snd.volume", "game.snd.mute", "game.snd.unmute", "game.snd.speed",
+  "game.ui.btn", "game.ui.panel", "game.ui.text", "game.fps.show", "game.cam.shake", "game.clearall", "game.phys.aabb", "game.phys.circlecol",
+  "game.input.keydown", "game.input.mouseclick", "game.input.is.w", "game.input.is.a", "game.input.is.s", "game.input.is.d",
+
+  // --- PARTE 6: NOVO COMPONENTE VZK.UTIL.* & SINTAXE INTEGRADA (25 COMANDOS) ---
+  "?a=a?", "?a!=b?", "?num?", "?empty?", "=vzk=", "vzk.util.dice", "vzk.util.coin", "vzk.util.delayid", "vzk.util.rgb2hex", "vzk.util.hex2rgb", "vzk.util.uuid4", "vzk.util.percentage", "vzk.util.slugify", "vzk.util.now", "vzk.util.today", "vzk.util.username", "vzk.util.mathleak", "vzk.util.isurl", "vzk.util.safestr", "vzk.util.range", "vzk.util.leetspeak", "vzk.util.logbase", "vzk.util.temp.c2f", "vzk.util.temp.f2c", "vzk.util.greet",  "vzk.secure.validatecert", // <- Esse era o seu último comando. Adicione a vírgula nele e cole os de baixo:
+  "sys.uptime", "sys.title", "sys.cookie.set", "sys.cookie.get", "time.sleep.sim", "math.adv.fib", "str.adv.mask", "validate.numle", "validate.numge", "vzk.echo"
+
+];
+
+let currentFocus = -1;
 
 /* =====================================================
    🎨 SISTEMA DE HIGHLIGHT (COLORIR)
 ===================================================== */
 function highlightVarkz(text) {
-  let html = text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-
-  // 1. Comentários (# comentário)
+  let html = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   html = html.replace(/(#.*)/g, '<span class="vzk-comment">$1</span>');
-
-  // 2. Strings ("texto")
   html = html.replace(/(".*?")/g, '<span class="vzk-string">$1</span>');
 
-  // 3. Super Lista de Comandos Atualizada (Contém os novos 50 comandos)
-  const comandos = [
-    "var", "set", "show", "input", "clear", "reset", "check", "type", "log", "swap", 
-    "time\\(day\\)", "time\\(hour\\)", "kill", "repeat", "end",
-    "upper", "lower", "len", "trim", "rev", "replace", "concat", "split",
-    "round", "floor", "ceil", "abs", "pow", "sqrt", "min", "max",
-    "arr\\.new", "arr\\.push", "arr\\.get", "arr\\.size", "arr\\.pop",
-    "time\\(ms\\)", "sleep", "env\\.lang", "env\\.platform",
-    "web\\.redirect", "web\\.alert", "dom\\.title", "dom\\.write", "dom\\.color",
-    "storage\\.set", "storage\\.get", "to\\.num", "to\\.str", "is\\.nan", "vzk\\.version"
-  ];
-  
-  comandos.forEach(cmd => {
-    let regex = new RegExp(`\\b(${cmd})\\b`, "g");
+  listaComandosRaw.forEach(cmd => {
+    let safeCmd = cmd.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    let regex = new RegExp(`\\b(${safeCmd})\\b`, "g");
     html = html.replace(regex, '<span class="vzk-command">$1</span>');
   });
 
-  // 4. Comandos por Símbolos (~, ++, --, >>)
   html = html.replace(/(~.+?~\s*>\s*\w+)/g, '<span class="vzk-symbol">$1</span>');
   html = html.replace(/(\+\+\s*\w+)/g, '<span class="vzk-symbol">$1</span>');
   html = html.replace(/(--\s*\w+)/g, '<span class="vzk-symbol">$1</span>');
   html = html.replace(/(>>\s*\w+)/g, '<span class="vzk-symbol">$1</span>');
-
-  // 5. Condicionais estruturais (?, :, !)
   html = html.replace(/(\?.+?\?)/g, '<span class="vzk-if">$1</span>');
   html = html.replace(/( :| !|^:|^!)/gm, '<span class="vzk-if">$1</span>');
-
-  // 6. Números isolados
   html = html.replace(/\b(\d+)\b/g, '<span class="vzk-number">$1</span>');
 
   return html;
 }
 
-/* =====================================================
-   🔄 ATUALIZAR EDITOR (LINHAS + CORES)
-===================================================== */
 function updateEditor() {
   let content = codeArea.value;
-
-  // 1. Atualiza as linhas numéricas paralelas
   let linesCount = content.split("\n").length;
   let linesHtml = '<div style="padding-right: 10px;">';
-  for (let i = 1; i <= linesCount; i++) {
-    linesHtml += i + "<br>";
-  }
-  linesHtml += '</div>';
-  lineNumbers.innerHTML = linesHtml;
+  for (let i = 1; i <= linesCount; i++) linesHtml += i + "<br>";
+  lineNumbers.innerHTML = linesHtml + '</div>';
 
-  // 2. Atualiza o texto colorido na div de trás
   highlightLayer.innerHTML = highlightVarkz(content) + (content.endsWith("\n") ? "\n " : "");
-  
-  // Sincroniza o scroll imediatamente
   syncScroll();
 }
 
-/* =====================================================
-   📜 SINCRONIZAR SCROLL
-===================================================== */
 function syncScroll() {
   highlightLayer.scrollTop = codeArea.scrollTop;
   highlightLayer.scrollLeft = codeArea.scrollLeft;
   lineNumbers.scrollTop = codeArea.scrollTop;
 }
 
-// Inicializa no carregamento da tela
+/* =====================================================
+   🧠 MOTOR DE AUTOCOMPLETE (SISTEMA DE INTELLISENSE)
+===================================================== */
+function onEditorInput(e) {
+  updateEditor();
+  showAutocomplete();
+}
+
+function onEditorKeyDown(e) {
+  let x = document.getElementById("autocomplete-list");
+  if (x) x = x.getElementsByTagName("div");
+  
+  if (e.keyCode == 40) { // Seta para Baixo
+    e.preventDefault();
+    currentFocus++;
+    addActive(x);
+  } else if (e.keyCode == 38) { // Seta para Cima
+    e.preventDefault();
+    currentFocus--;
+    addActive(x);
+  } else if (e.keyCode == 13 || e.keyCode == 9) { // Enter ou Tab
+    if (currentFocus > -1 && x && x[currentFocus]) {
+      e.preventDefault();
+      x[currentFocus].click();
+    }
+  }
+}
+
+function showAutocomplete() {
+  let val = getCurrentWord(codeArea);
+  closeAutocomplete();
+  if (!val || val.length < 1) return;
+  
+  currentFocus = -1;
+  let matches = listaComandosRaw.filter(cmd => cmd.toLowerCase().startsWith(val.toLowerCase()) && cmd !== val);
+  
+  if (matches.length === 0) return;
+
+  acList.style.display = "block";
+  
+  // Posiciona a caixa perto do cursor simulado de forma aproximada
+  let caretPos = getCaretCoordinates(codeArea, codeArea.selectionStart);
+  acList.style.left = Math.min(caretPos.left, codeArea.clientWidth - 160) + "px";
+  acList.style.top = (caretPos.top + 20) + "px";
+
+  matches.forEach(match => {
+    let b = document.createElement("DIV");
+    b.innerHTML = "<strong>" + match.substr(0, val.length) + "</strong>" + match.substr(val.length);
+    b.addEventListener("click", function() {
+      insertWord(codeArea, match);
+      closeAutocomplete();
+      updateEditor();
+    });
+    acList.appendChild(b);
+  });
+}
+
+function getCurrentWord(el) {
+  let pos = el.selectionStart;
+  let text = el.value.substring(0, pos);
+  let words = text.split(/[\s,]/);
+  return words[words.length - 1];
+}
+
+function insertWord(el, word) {
+  let pos = el.selectionStart;
+  let text = el.value;
+  let startTxt = text.substring(0, pos);
+  let endTxt = text.substring(pos);
+  let lastIndex = Math.max(startTxt.lastIndexOf(" "), startTxt.lastIndexOf(","), startTxt.lastIndexOf("\n")) + 1;
+  
+  el.value = text.substring(0, lastIndex) + word + " " + endTxt;
+  el.selectionStart = el.selectionEnd = lastIndex + word.length + 1;
+  el.focus();
+}
+
+function addActive(x) {
+  if (!x) return false;
+  removeActive(x);
+  if (currentFocus >= x.length) currentFocus = 0;
+  if (currentFocus < 0) currentFocus = (x.length - 1);
+  x[currentFocus].classList.add("active");
+  x[currentFocus].scrollIntoView({ block: "nearest" });
+}
+
+function removeActive(x) {
+  for (let i = 0; i < x.length; i++) {
+    x[i].classList.remove("active");
+  }
+}
+
+function closeAutocomplete() {
+  acList.innerHTML = "";
+  acList.style.display = "none";
+}
+
+// Helper rápido para simular coordenadas de texto na tela para o menu flutuar
+function getCaretCoordinates(element, position) {
+  let lines = element.value.substring(0, position).split("\n");
+  let currentLine = lines.length;
+  let currentCol = lines[lines.length - 1].length;
+  return {
+    top: (currentLine - 1) * 20 - element.scrollTop,
+    left: currentCol * 8.4 + 10 - element.scrollLeft
+  };
+}
+
+document.addEventListener("click", function (e) {
+  if (e.target !== codeArea) closeAutocomplete();
+});
+
+// Inicialização
 updateEditor();
 
-/* =====================================================
-   ▶ RUN
-===================================================== */
 function run() {
-  const code = codeArea.value;
-  const result = VARKZ.run(code);
+  const result = VARKZ.run(codeArea.value);
   document.getElementById("out").innerText = result;
 }
 </script>
