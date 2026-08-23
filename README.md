@@ -2,7 +2,7 @@
 🚀 VARKZ ENGINE — MANUAL DE DOCUMENTAÇÃO E EXPANSÃO
 ===========================================================================
 
-A VARKZ Engine (v3.0.0 Stable) é um interpretador de scripts procedural de 
+A VARKZ Engine (v3.0.0 Stable) é um interpretador de scripts procedural de
 alto desempenho baseado em JavaScript. Projetado para funcionar de forma 
 desacoplada e altamente extensível, o motor permite a criação rápida de 
 interfaces, execução de IA de jogos e renderização gráfica em tempo real.
